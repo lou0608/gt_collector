@@ -1,0 +1,18 @@
+services:
+  gt-collector:
+    build: .
+    container_name: gt-collector
+    command: >
+      python -u -m app.run_topic --topic-mid /m/01wgr --topic-label cardiologie
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - ./data:/data
+    user: "0:0"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - OUTDIR=/data
+      - GT_GEO=FR
+      - GT_MAX_CALLS=5
+    restart: "no"
