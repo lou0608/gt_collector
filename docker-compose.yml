@@ -1,18 +1,27 @@
 services:
   gt-collector:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: gt-collector
-    command: >
-      python -u -m app.run_topic --topic-mid /m/01wgr --topic-label cardiologie
-    working_dir: /app
-    volumes:
-      - ./:/app
-      - ./data:/data
-    user: "0:0"
+    env_file:
+      - .env
     environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app
-      - OUTDIR=/data
-      - GT_GEO=FR
-      - GT_MAX_CALLS=5
-    restart: "no"
+      # Valeurs par défaut si absentes du .env
+      TZ: "Europe/Paris"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      # Tous les fichiers produits par les scripts (CSV) seront écrits ici
+      - ./data:/data
+      # OPTIONNEL (décommente si tu veux développer sans rebuild image)
+      - ./app:/app/app
+    working_dir: /app
+    healthcheck:
+      test: [ "CMD", "python", "-m", "app.healthcheck" ]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    # Le CMD par défaut de l'image est "python -m app.main".
+    # Pour exécuter un script spécifique, utilise: docker compose run --rm gt-collector python -u -m app.search_mid --query "..."
+

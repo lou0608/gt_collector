@@ -123,15 +123,49 @@ def _write_hourly_bootstrap_7d(topic_mid: str, topic_label: str, topic_slug: str
 
 def _write_hourly_yesterday(topic_mid: str, topic_label: str, topic_slug: str, run_date: str):
     phase = "hourly_yesterday"
-    # Hier en UTC (00:00–23:59), pytrends accepte 'YYYY-MM-DD YYYY-MM-DD'
-    today_UTC = datetime.now(timezone.utc).date()
-    yesterday = today_UTC - timedelta(days=1)
-    tf = f"{yesterday.isoformat()} {yesterday.isoformat()}"
+    # 1) Interroger de l'horaire : now 7-d (et pas un intervalle fixe)
+    tf = "now 7-d"
     if not _safe_build(topic_mid, tf, phase):
         print(f"[WARN] hourly_yesterday KO ({topic_label})")
         return
-    _write_hourly_common(topic_mid, topic_label, topic_slug, run_date,
-                         phase, fname=f"hourly_yesterday__{topic_slug}__{run_date}.csv")
+
+    # 2) Récupérer et transformer comme d'habitude
+    df = pytrends.interest_over_time()
+    if df is None or df.empty:
+        print(f"[INFO] Aucune donnée {phase} pour {topic_label}")
+        return
+
+    if "isPartial" in df.columns:
+        df = df.drop(columns=["isPartial"])
+
+    # 3) UTC -> Europe/Paris + calcul "hier" en local
+    df.index = df.index.tz_localize("UTC").tz_convert("Europe/Paris")
+    df["date_local"] = df.index.date
+    from datetime import datetime, timedelta
+    yesterday_local = (datetime.now().astimezone().date() - timedelta(days=1))
+
+    # 4) Filtrer strictement "hier" (≈ 24 lignes)
+    df = df[df["date_local"] == yesterday_local]
+    if df.empty:
+        print(
+            f"[INFO] Pas de lignes horaires pour 'hier' ({yesterday_local}) sur {topic_label}")
+        return
+
+    df["hour_local"] = df.index.hour
+    df = df.reset_index().rename(columns={"date": "dt_local"})
+
+    # 5) Mise en long et écriture
+    df_long = df.melt(id_vars=["dt_local", "hour_local"],
+                      var_name="topic_mid", value_name="value")
+    df_long = df_long[df_long["topic_mid"] == topic_mid].copy()
+    df_long["topic_label"] = topic_label
+    df_long["geo"] = GEO
+    df_long["run_id"] = RUN_ID
+    df_long["phase"] = phase
+
+    out = OUTDIR / f"hourly_yesterday__{topic_slug}__{run_date}.csv"
+    df_long.to_csv(out, index=False, encoding="utf-8")
+    print(f"[OK] {phase} → {out} ({len(df_long)} lignes)")
 
 
 def main():

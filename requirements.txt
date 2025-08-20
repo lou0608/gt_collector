@@ -2,4 +2,6 @@ pytrends
 pandas
 python-dateutil
 pytz
+requests>=2.32.0
+
 

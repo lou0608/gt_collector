@@ -1,0 +1,47 @@
+# --- Sorties et données locales ---
+/data/*
+!data/.gitkeep
+*.csv
+*.parquet
+*.log
+*.tmp
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# --- Environnements & secrets ---
+.venv/
+env/
+.conda/
+.env
+*.env
+
+# --- Tests ---
+.coverage
+htmlcov/
+.tox/
+pytest_cache/
+
+# --- Jupyter / IPython ---
+.ipynb_checkpoints/
+*.ipynb
+
+# --- IDE / outils ---
+.vscode/
+.idea/
+*.code-workspace
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Docker ---
+*.pid
+*.seed
