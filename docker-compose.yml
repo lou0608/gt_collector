@@ -4,25 +4,28 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: gt-collector
-    env_file:
-      - .env
+
+    # ⚠️ Supprimé l'env_file obligatoire (.env)
+    # On passe les variables directement dans environment.
     environment:
-      # Valeurs par défaut si absentes du .env
+      # Valeurs par défaut si absentes
       TZ: "Europe/Paris"
       PYTHONUNBUFFERED: "1"
+      TOPIC_MID: ${TOPIC_MID:-/m/01l2m3}
+      TOPIC_LABEL: ${TOPIC_LABEL:-insuffisance_cardiaque}
+      GT_OFFLINE_FIXTURE: ${GT_OFFLINE_FIXTURE:-1}
+
     volumes:
-      # Tous les fichiers produits par les scripts (CSV) seront écrits ici
-      - ./data:/data
-      # OPTIONNEL (décommente si tu veux développer sans rebuild image)
-      - ./app:/app/app
+      - ./data:/data # CSV générés par les scripts
+      - ./app:/app/app # optionnel: dev sans rebuild image
       - ./logs:/logs
+
     working_dir: /app
+
     healthcheck:
       test: [ "CMD", "python", "-m", "app.healthcheck" ]
       interval: 5m
       timeout: 10s
       retries: 3
-    restart: unless-stopped
-    # Le CMD par défaut de l'image est "python -m app.main".
-    # Pour exécuter un script spécifique, utilise: docker compose run --rm gt-collector python -u -m app.search_mid --query "..."
 
+    restart: unless-stopped
