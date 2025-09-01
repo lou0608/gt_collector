@@ -27,8 +27,7 @@ jobs:
       - name: Run offline pipeline
         run: |
           docker compose --env-file .env.ci run --rm \
-            -e PYTHONUNBUFFERED=1 \
-            -e PYTHONPATH=/app \
+            -e GT_NO_DOCKER=1 \
             gt-collector \
             python -u scripts/run_all.py
 
