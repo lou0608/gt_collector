@@ -15,6 +15,7 @@ services:
       - ./data:/data
       # OPTIONNEL (décommente si tu veux développer sans rebuild image)
       - ./app:/app/app
+      - ./logs:/logs
     working_dir: /app
     healthcheck:
       test: [ "CMD", "python", "-m", "app.healthcheck" ]
