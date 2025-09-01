@@ -1,0 +1,92 @@
+name: Schedule — run offline & upload CSV
+
+on:
+  schedule:
+    # ⚠️ CRON en UTC. 04:00 UTC ≈ 06:00 Europe/Paris (heure d'été).
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      run_offline:
+        description: "Forcer le mode offline (GT_OFFLINE_FIXTURE=1)"
+        type: boolean
+        default: true
+      hc_max_err_rate:
+        description: "Seuil HealthCheck (0.0-1.0)"
+        type: string
+        default: "0.80"
+      hc_require_today:
+        description: "Exiger des données du jour (1 oui / 0 non)"
+        type: string
+        default: "1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: schedule
+  cancel-in-progress: false
+
+jobs:
+  run-offline:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Paris
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+
+      # ---- Paramétrage Healthcheck (soft-fail déjà géré dans ton code) ----
+      HC_MAX_ERR_RATE: ${{ inputs.hc_max_err_rate || '0.80' }}
+      HC_REQUIRE_TODAY: ${{ inputs.hc_require_today || '1' }}
+
+      # ---- Sujet ----
+      TOPIC_MID: ${{ vars.TOPIC_MID }}
+      TOPIC_LABEL: ${{ vars.TOPIC_LABEL }}
+
+      # ---- Offline by default (peut être désactivé en prod réelle) ----
+      GT_OFFLINE_FIXTURE: ${{ inputs.run_offline && '1' || '0' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure data dir
+        run: mkdir -p ./data
+
+      - name: Show variables
+        run: |
+            echo "TOPIC_MID=${TOPIC_MID}"
+            echo "TOPIC_LABEL=${TOPIC_LABEL}"
+            echo "GT_OFFLINE_FIXTURE=${GT_OFFLINE_FIXTURE}"
+            echo "HC_MAX_ERR_RATE=${HC_MAX_ERR_RATE}"
+            echo "HC_REQUIRE_TODAY=${HC_REQUIRE_TODAY}"
+
+      - name: Build (compose)
+        run: docker compose build gt-collector
+
+      - name: Run pipeline (offline/online)
+        # On monte ./data dans /data pour récupérer les CSV
+        run: |
+          docker compose run --rm \
+            -e PYTHONUNBUFFERED=1 \
+            -e PYTHONPATH=/app \
+            -e GT_OFFLINE_FIXTURE="${GT_OFFLINE_FIXTURE}" \
+            -e TOPIC_MID="${TOPIC_MID}" \
+            -e TOPIC_LABEL="${TOPIC_LABEL}" \
+            -e HC_MAX_ERR_RATE="${HC_MAX_ERR_RATE}" \
+            -e HC_REQUIRE_TODAY="${HC_REQUIRE_TODAY}" \
+            -v "$PWD/data":/data \
+            gt-collector \
+            python -u scripts/run_all.py
+
+      - name: List produced files
+        run: ls -lah ./data || true
+
+      - name: Upload CSV artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trends-csv-${{ github.run_id }}
+          path: |
+            data/*.csv
+          if-no-files-found: warn
+          retention-days: 7
