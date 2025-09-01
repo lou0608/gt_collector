@@ -7,3 +7,4 @@ Pipeline de collecte des indices Google Trends (mots-clés cardiologie) écrivan
 cp .env.example .env
 docker compose build
 docker compose up --abort-on-container-exit
+# test schedule
