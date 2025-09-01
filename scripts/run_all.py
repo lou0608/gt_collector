@@ -9,8 +9,15 @@ ROOT = Path(__file__).resolve().parents[1]
 CWD = str(ROOT)
 DC = os.environ.get("DOCKER_COMPOSE", "docker compose")
 
+# 👉 Nouveau flag pour désactiver les appels Docker
+INSIDE_CI = os.getenv("GITHUB_ACTIONS") == "true" or os.getenv(
+    "GT_NO_DOCKER") == "1"
+
 
 def run(cmd: str, cwd=CWD, env=None):
+    if INSIDE_CI and cmd.startswith("docker"):
+        print(f"[SKIP] {cmd} (disabled in CI/CD)")
+        return
     print(f"\n$ {cmd}")
     r = subprocess.run(shlex.split(cmd), cwd=cwd, env=env)
     if r.returncode != 0:
@@ -18,7 +25,9 @@ def run(cmd: str, cwd=CWD, env=None):
 
 
 def run_soft(cmd: str, cwd=CWD, env=None):
-    """Exécute une commande mais n'arrête pas le script si elle échoue."""
+    if INSIDE_CI and cmd.startswith("docker"):
+        print(f"[SKIP] {cmd} (disabled in CI/CD)")
+        return
     print(f"\n$ {cmd}")
     r = subprocess.run(shlex.split(cmd), cwd=cwd, env=env)
     if r.returncode != 0:
