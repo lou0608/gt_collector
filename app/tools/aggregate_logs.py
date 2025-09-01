@@ -164,4 +164,40 @@ def summarize_meter(meter_csv: Path) -> Path | None:
 
 
 def main():
-    ap
+    ap = argparse.ArgumentParser(
+        description="Agrégateur de logs pour Power BI")
+    ap.add_argument(
+        "--calls",
+        type=Path,
+        default=DATA / "logs" / "calls__20250901.csv",
+        help="Chemin CSV des appels (ex: /data/logs/calls__YYYYMMDD.csv)",
+    )
+    ap.add_argument(
+        "--meter",
+        type=Path,
+        default=DATA / "meter.csv",
+        help="Chemin CSV meter (ex: /data/meter.csv | /data/gt_meter.csv | /data/gt_meters.csv)",
+    )
+    args = ap.parse_args()
+
+    # Résumé calls
+    calls_out = summarize_calls(args.calls)
+
+    # Auto-détection meter si le chemin fourni n'existe pas
+    if not args.meter.exists():
+        for cand in ["gt_meter.csv", "gt_meters.csv", "meter.csv"]:
+            p = DATA / cand
+            if p.exists():
+                print(f"[INFO] meter introuvable → utilisation de {p}")
+                args.meter = p
+                break
+
+    meter_out = summarize_meter(args.meter)
+
+    ok_any = (calls_out is not None) or (meter_out is not None)
+    if not ok_any:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
