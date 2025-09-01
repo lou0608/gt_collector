@@ -13,6 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Code applicatif
 COPY app/ ./app
+COPY scripts/ ./scripts  
+COPY logs/ ./logs         
 
 # Healthcheck (si app.healthcheck existe vraiment)
 HEALTHCHECK --interval=5m --timeout=10s CMD python -m app.healthcheck || exit 1

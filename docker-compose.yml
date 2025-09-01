@@ -5,20 +5,19 @@ services:
       dockerfile: Dockerfile
     container_name: gt-collector
 
-    # ⚠️ Supprimé l'env_file obligatoire (.env)
-    # On passe les variables directement dans environment.
     environment:
-      # Valeurs par défaut si absentes
       TZ: "Europe/Paris"
       PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
       TOPIC_MID: ${TOPIC_MID:-/m/01l2m3}
       TOPIC_LABEL: ${TOPIC_LABEL:-insuffisance_cardiaque}
       GT_OFFLINE_FIXTURE: ${GT_OFFLINE_FIXTURE:-1}
 
     volumes:
-      - ./data:/data # CSV générés par les scripts
-      - ./app:/app/app # optionnel: dev sans rebuild image
+      - ./data:/data
       - ./logs:/logs
+      - ./app:/app/app
+      - ./scripts:/app/scripts # 👈 ajout pour avoir scripts montés aussi en dev local
 
     working_dir: /app
 
