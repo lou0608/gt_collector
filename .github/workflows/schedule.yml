@@ -21,12 +21,17 @@ jobs:
           docker --version
           docker compose version
 
+      - name: Build services
+        run: docker compose build
+
       - name: Run offline pipeline
         run: |
           docker compose run --rm \
             -e PYTHONUNBUFFERED=1 \
             -e PYTHONPATH=/app \
             -e GT_OFFLINE_FIXTURE=1 \
+            -e TOPIC_MID="/m/01l2m3" \
+            -e TOPIC_LABEL="insuffisance_cardiaque" \
             gt-collector \
             python -u scripts/run_all.py
 
