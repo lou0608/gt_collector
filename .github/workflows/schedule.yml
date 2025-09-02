@@ -1,39 +1,35 @@
-name: Schedule - Run All
+name: Google Trends Daily Pipeline
 
 on:
-  push:
-    branches:
-      - feat/hourly-flags   # TEMPORAIRE : permet de tester avant merge dans main
-  workflow_dispatch:         # permet de lancer manuellement depuis Actions
+  workflow_dispatch:
   schedule:
-    - cron: "0 4 * * *"      # 04:00 UTC → 06:00 Paris (tous les jours)
+    - cron: "0 4 * * *"   # 04:00 UTC / 06:00 Paris
 
 jobs:
-  run-all:
+  run-pipeline:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
         run: |
-          docker --version
-          docker compose version
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Build services
-        run: docker compose build
-
-      - name: Run offline pipeline
+      - name: Run pipeline (Option A - no Docker)
         run: |
-          docker compose --env-file .env.ci run --rm \
-            -e GT_NO_DOCKER=1 \
-            gt-collector \
-            python -u scripts/run_all.py
-
+          export GT_NO_DOCKER=1
+          python scripts/run_all.py
 
       - name: Upload CSV artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: trends-csv-${{ github.run_id }}
+          name: trends-csv
           path: data/*.csv
