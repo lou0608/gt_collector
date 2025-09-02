@@ -1,12 +1,9 @@
-name: Google Trends Daily Pipeline (test)
+name: Google Trends Daily Pipeline
 
 on:
-  push:                       # <-- ajout temporaire pour forcer l'apparition
-    branches:
-      - feat/hourly-flags
-  workflow_dispatch:        # permet de lancer manuellement
+  workflow_dispatch:           # permet de lancer manuellement
   schedule:
-    - cron: "0 4 * * *"     # 04:00 UTC / 06:00 Paris
+    - cron: "0 4 * * *"        # 04:00 UTC / 06:00 Paris
 
 jobs:
   run-pipeline:
