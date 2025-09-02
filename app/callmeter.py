@@ -8,8 +8,15 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 # --- Répertoires & fichiers de log ---
-# On se cale sur OUTDIR=/data pour rester cohérent avec le montage Docker.
-BASEDIR = Path(os.getenv("OUTDIR", "/data"))
+# On choisit le répertoire en fonction de l'environnement :
+# - En GitHub Actions : ./data/logs (dans le repo, artefacts faciles à uploader)
+# - Sinon (Docker/local) : /data/logs (cohérent avec les montages Docker)
+
+if os.getenv("GITHUB_ACTIONS") == "true":
+    BASEDIR = Path("data")
+else:
+    BASEDIR = Path(os.getenv("OUTDIR", "/data"))
+
 LOGDIR = BASEDIR / "logs"
 LOGDIR.mkdir(parents=True, exist_ok=True)
 
