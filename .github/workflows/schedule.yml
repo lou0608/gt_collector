@@ -1,4 +1,4 @@
-name: Google Trends Daily Pipeline
+name: Google Trends Daily Pipeline (test)
 
 on:
   workflow_dispatch:
