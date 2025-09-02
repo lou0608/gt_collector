@@ -23,8 +23,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run pipeline (Option A - no Docker, Cardiologie)
-        env:                # <-- ✅ définir les variables ici
+      - name: Run pipeline (Cardiologie)
+        env:                # ✅ ICI : définir les variables correctement
           GT_NO_DOCKER: "1"
           RUN_TOPIC_MID: "/m/0dg3n"
         run: |
