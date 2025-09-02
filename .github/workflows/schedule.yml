@@ -26,6 +26,7 @@ jobs:
       - name: Run pipeline (Option A - no Docker)
         run: |
           export GT_NO_DOCKER=1
+          export RUN_TOPIC_MID="/m/0dg3n"   # Cardiologie
           python scripts/run_all.py
 
       - name: Upload CSV artifacts
