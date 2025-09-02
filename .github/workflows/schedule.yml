@@ -28,8 +28,10 @@ jobs:
 
       - name: Run pipeline (Cardiologie)
         env:
+          PYTHONUNBUFFERED: "1"
           GT_NO_DOCKER: "1"
           RUN_TOPIC_MID: "/m/0dg3n"
+          GT_MAX_CALLS: "30" 
         run: |
           python -m app.run_topic --topic-mid "/m/0dg3n" --topic-label "cardiologie" --only-hourly --hourly-mode bootstrap
 
