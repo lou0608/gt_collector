@@ -1,9 +1,9 @@
 name: Google Trends Daily Pipeline
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:           # permet de lancer manuellement
   schedule:
-    - cron: "0 4 * * *"    # 04:00 UTC / 06:00 Paris
+    - cron: "0 4 * * *"        # 04:00 UTC / 06:00 Paris
 
 jobs:
   run-pipeline:
@@ -24,11 +24,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run pipeline (Cardiologie)
-        env:                # ✅ ICI : définir les variables correctement
+        env:
           GT_NO_DOCKER: "1"
           RUN_TOPIC_MID: "/m/0dg3n"
         run: |
-          python scripts/run_all.py
+          python -m app.run_topic --topic-mid "/m/0dg3n" --topic-label "cardiologie" --only-hourly --hourly-mode bootstrap
 
       - name: Upload CSV artifacts
         uses: actions/upload-artifact@v4
