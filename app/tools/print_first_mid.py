@@ -1,8 +1,17 @@
 from pathlib import Path
 import csv
 import sys
+import os
 
-DATA = Path("/data")
+# ====== Config ======
+# /data est monté par Docker ; sur GitHub Actions → ./data
+if os.getenv("GITHUB_ACTIONS") == "true":
+    DATA = Path("data")
+else:
+    DATA = Path(os.getenv("OUTDIR", "/data"))
+
+# création sécurisée du dossier
+DATA.mkdir(parents=True, exist_ok=True)
 
 if len(sys.argv) < 2:
     print("Usage: python -m app.tools.print_first_mid <slug-mot-cle>")
