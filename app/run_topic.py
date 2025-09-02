@@ -16,12 +16,18 @@ from app.callmeter import log_call, CallBudget, METER_PATH
 from app.normalize import normalize_daily, normalize_hourly
 
 # ====== Config ======
-# /data est monté par Docker ; on écrit sous /data/raw/{daily|hourly}
-BASEDIR = Path(os.getenv("OUTDIR", "/data"))
+# /data est monté par Docker ; sur GitHub Actions → ./data
+if os.getenv("GITHUB_ACTIONS") == "true":
+    BASEDIR = Path("data")
+else:
+    BASEDIR = Path(os.getenv("OUTDIR", "/data"))
+
 RAWDIR = BASEDIR / "raw"
 DAILYDIR = RAWDIR / "daily"
 HOURLYDIR = RAWDIR / "hourly"
-for d in (RAWDIR, DAILYDIR, HOURLYDIR):
+LOGSDIR = BASEDIR / "logs"
+
+for d in (RAWDIR, DAILYDIR, HOURLYDIR, LOGSDIR):
     d.mkdir(parents=True, exist_ok=True)
 
 GEO = os.getenv("GT_GEO", "FR")

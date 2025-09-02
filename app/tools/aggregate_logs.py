@@ -1,15 +1,26 @@
 from __future__ import annotations
 import csv
+import os
 from pathlib import Path
 from datetime import datetime
 from collections import Counter
 
-DATA = Path("/data")
+# ====== Config ======
+# /data est monté par Docker ; sur GitHub Actions → ./data
+if os.getenv("GITHUB_ACTIONS") == "true":
+    DATA = Path("data")
+else:
+    DATA = Path(os.getenv("OUTDIR", "/data"))
+
 LOGS = DATA / "logs"
 METER = DATA / "gt_meter.csv"
 
+# création sécurisée des dossiers
+DATA.mkdir(parents=True, exist_ok=True)
+LOGS.mkdir(parents=True, exist_ok=True)
 
-def _latest(pattern: str, base: Path = DATA) -> Path | None:
+
+def _latest(pattern: str, base: Path = LOGS) -> Path | None:
     files = sorted(base.glob(pattern))
     return files[-1] if files else None
 
@@ -22,7 +33,6 @@ def _to_int(x, default=0):
 
 
 def aggregate_calls() -> Path | None:
-    LOGS.mkdir(exist_ok=True)
     last = _latest("calls__*.csv", LOGS)
     files = [last] if last else list(LOGS.glob("calls__*.csv"))
     if not files:
@@ -64,7 +74,8 @@ def aggregate_calls() -> Path | None:
     out = DATA / f"calls_summary__{ymd}.csv"
     with out.open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(
-            f, fieldnames=["total_calls", "ok_2xx", "err_4xx", "err_5xx"])
+            f, fieldnames=["total_calls", "ok_2xx", "err_4xx", "err_5xx"]
+        )
         w.writeheader()
         w.writerow({
             "total_calls": total,
@@ -78,12 +89,12 @@ def aggregate_calls() -> Path | None:
 
 def aggregate_meter() -> Path | None:
     if not METER.exists():
-        # tente /data/logs/meter.csv si présent (cf. ton log)
-        alt = DATA / "logs" / "meter.csv"
+        # tente data/logs/meter.csv si présent
+        alt = LOGS / "meter.csv"
         if alt.exists():
             meter_path = alt
         else:
-            print("[INFO] meter introuvable → utilisation de /data/gt_meter.csv")
+            print("[INFO] meter introuvable → utilisation de data/gt_meter.csv")
             meter_path = METER
         if not meter_path.exists():
             print("[aggregate_logs] Pas de meter, on saute.")
@@ -115,8 +126,6 @@ def aggregate_meter() -> Path | None:
 
 
 def main():
-    DATA.mkdir(exist_ok=True)
-    LOGS.mkdir(exist_ok=True)
     aggregate_calls()
     aggregate_meter()
 

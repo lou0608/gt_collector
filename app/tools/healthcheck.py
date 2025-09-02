@@ -5,8 +5,17 @@ import os
 from pathlib import Path
 from datetime import datetime, date
 
-DATA = Path("/data")
+# ====== Config ======
+# /data est monté par Docker ; sur GitHub Actions → ./data
+if os.getenv("GITHUB_ACTIONS") == "true":
+    DATA = Path("data")
+else:
+    DATA = Path(os.getenv("OUTDIR", "/data"))
+
 TODAY = date.today()
+
+# création sécurisée du dossier
+DATA.mkdir(parents=True, exist_ok=True)
 
 
 def latest_file(pattern: str) -> Path | None:
@@ -73,7 +82,6 @@ def read_meter_summary(p: Path) -> dict:
 def main():
     require_today = (os.environ.get("HC_REQUIRE_TODAY",
                      "1").lower() in {"1", "true", "yes"})
-    # tolérant par défaut (infra)
     max_err_rate = float(os.environ.get("HC_MAX_ERR_RATE", "0.80"))
     max_backoff = int(os.environ.get("HC_MAX_BACKOFF_S", "600"))
 
