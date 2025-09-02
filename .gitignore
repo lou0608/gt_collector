@@ -5,6 +5,15 @@
 *.parquet
 *.log
 *.tmp
+# Data & logs (garder les dossiers vides)
+data/raw/*
+!data/raw/.gitkeep
+data/logs/*
+!data/logs/.gitkeep
+
+# Autoriser les fichiers “meta”
+!data/meta/**
+
 
 # --- Python ---
 __pycache__/
