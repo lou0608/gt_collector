@@ -26,14 +26,14 @@ jobs:
       - name: Prepare data directory
         run: mkdir -p data/logs
 
-      - name: Run pipeline (Cardiologie)
+      - name: Run pipeline (Hypertension)
         env:
           PYTHONUNBUFFERED: "1"
           GT_NO_DOCKER: "1"
-          RUN_TOPIC_MID: "/m/0dg3n"
+          RUN_TOPIC_MID: "/m/0k95h"
           GT_MAX_CALLS: "30" 
         run: |
-          python -m app.run_topic --topic-mid "/m/0dg3n" --topic-label "cardiologie" --only-hourly --hourly-mode bootstrap
+          python -m app.run_topic --topic-mid "/m/0k95h" --topic-label "hypertension" --only-hourly --hourly-mode bootstrap
 
       - name: Upload CSV artifacts
         uses: actions/upload-artifact@v4
