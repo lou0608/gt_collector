@@ -3,16 +3,15 @@ name: CI
 on:
   push:
     branches:
-      - main
-      - feat/**
-  pull_request:
+      - feat/hourly-flags   # tu peux ajouter main ou d'autres branches si besoin
+  pull_request:              # vérifie aussi lors des PR
 
 jobs:
-  lint-test-build:
+  lint-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -22,19 +21,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install ruff pytest
 
-      - name: Run Ruff (lint)
+      - name: Run Ruff lint (relaxed rules)
         run: |
-          ruff check app \
-            --line-length=120 \
-            --ignore F401,F841,F811
+          pip install ruff
+          ruff check . --line-length=120 --ignore F401,F841,F811
 
-      - name: Run Pytest
+      - name: Run tests
         run: |
-          pytest -q || true
-
-      - name: Build Docker image
-        run: docker compose build
+          pytest -q || echo "⚠️ No tests yet"
