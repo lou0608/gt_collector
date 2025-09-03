@@ -9,7 +9,7 @@ env:
   PYTHONUNBUFFERED: "1"
   GT_NO_DOCKER: "1"
   RUN_TOPIC_MID: "/m/0k95h"   # MID pour 'hypertension'
-  # Réglages "run court" pour éviter les jobs qui s'éternisent en cas d'erreurs
+  # Réglages pour éviter les runs trop longs
   GT_MAX_CALLS: "20"
   GT_RETRIES: "3"
   GT_BASE_BACKOFF: "10"
@@ -44,6 +44,19 @@ jobs:
       - name: Run DAILY only (no hourly)
         run: |
           python -m app.tools.run_daily_only --topic-mid "${RUN_TOPIC_MID}" --topic-label "hypertension"
+
+      # Étape SUPERVISION 1 : résumés d’appels et quotas
+      - name: Aggregate logs (summaries)
+        run: |
+          python -m app.tools.aggregate_logs || true
+
+      # Étape SUPERVISION 2 : contrôle qualité (échoue si seuils dépassés)
+      - name: Healthcheck (fail the job if bad)
+        env:
+          HC_MAX_ERR_RATE: "0.9"   # tolère jusqu'à 90% d'erreurs
+          HC_REQUIRE_TODAY: "0"    # en démo, n’exige pas les données du jour
+        run: |
+          python -m app.tools.healthcheck
 
       - name: Upload CSV artifacts
         uses: actions/upload-artifact@v4
