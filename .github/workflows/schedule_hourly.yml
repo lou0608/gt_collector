@@ -20,8 +20,6 @@ env:
   GT_BASE_BACKOFF: "10"
   GT_PREJITTER_MIN: "1"
   GT_PREJITTER_MAX: "3"
-  # Par défaut on utilise yesterday ; tu peux le surcharger côté "Run workflow" (input hourly_mode)
-  HOURLY_MODE: ${{ github.event.inputs.hourly_mode || 'yesterday' }}
 
 jobs:
   run-pipeline:
@@ -49,7 +47,11 @@ jobs:
 
       - name: Run HOURLY 7d
         run: |
-          python -m app.run_topic --topic-mid "${RUN_TOPIC_MID}" --topic-label "hypertension" --only-hourly --hourly-mode "${HOURLY_MODE}"
+          python -m app.run_topic \
+            --topic-mid "${RUN_TOPIC_MID}" \
+            --topic-label "hypertension" \
+            --only-hourly \
+            --hourly-mode "${{ github.event.inputs.hourly_mode || 'yesterday' }}"
 
       # SUPERVISION 1 : agrégats de logs
       - name: Aggregate logs (summaries)
