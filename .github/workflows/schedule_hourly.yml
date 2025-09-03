@@ -8,7 +8,7 @@ on:
         required: false
         default: "yesterday"
   schedule:
-    - cron: "0 8 * * *"    # 08:00 UTC / 10:00 Paris
+    - cron: "0 9 * * *"    # 09:00 UTC / 11:00 Paris
 
 env:
   PYTHONUNBUFFERED: "1"
@@ -16,15 +16,15 @@ env:
   RUN_TOPIC_MID: "/m/0k95h"   # MID pour 'hypertension'
   # Réglages anti-runs interminables
   GT_MAX_CALLS: "20"
-  GT_RETRIES: "3"
-  GT_BASE_BACKOFF: "10"
+  GT_RETRIES: "6"             # plus de tentatives
+  GT_BASE_BACKOFF: "30"       # attente plus longue entre les tentatives
   GT_PREJITTER_MIN: "1"
-  GT_PREJITTER_MAX: "3"
+  GT_PREJITTER_MAX: "5"
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -51,7 +51,7 @@ jobs:
             --topic-mid "${RUN_TOPIC_MID}" \
             --topic-label "hypertension" \
             --only-hourly \
-            --hourly-mode "${{ github.event.inputs.hourly_mode || 'yesterday' }}"
+            --hourly-mode "${{ inputs.hourly_mode }}"
 
       # SUPERVISION 1 : agrégats de logs
       - name: Aggregate logs (summaries)
