@@ -5,9 +5,21 @@ on:
   schedule:
     - cron: "0 4 * * *"    # 04:00 UTC / 06:00 Paris
 
+env:
+  PYTHONUNBUFFERED: "1"
+  GT_NO_DOCKER: "1"
+  RUN_TOPIC_MID: "/m/0k95h"   # MID pour 'hypertension'
+  # Réglages "run court" pour éviter les jobs qui s'éternisent en cas d'erreurs
+  GT_MAX_CALLS: "20"
+  GT_RETRIES: "3"
+  GT_BASE_BACKOFF: "10"
+  GT_PREJITTER_MIN: "1"
+  GT_PREJITTER_MAX: "3"
+
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout code
@@ -23,18 +35,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Prepare data directory
-        run: mkdir -p data/logs
-
-      - name: Run pipeline (Cardiologie)
-        env:
-          GT_NO_DOCKER: "1"
-          RUN_TOPIC_MID: "/m/0dg3n"
+      - name: Prepare data directories
         run: |
-          python -m app.run_topic --topic-mid "/m/0dg3n" --topic-label "cardiologie" --only-hourly --hourly-mode bootstrap
+          mkdir -p data/logs
+          mkdir -p data/raw/daily
+          mkdir -p data/raw/hourly
+
+      - name: Run DAILY only (no hourly)
+        run: |
+          python -m app.tools.run_daily_only --topic-mid "${RUN_TOPIC_MID}" --topic-label "hypertension"
 
       - name: Upload CSV artifacts
         uses: actions/upload-artifact@v4
         with:
           name: trends-csv
-          path: data/*.csv
+          if-no-files-found: warn
+          path: |
+            data/**/*.csv
+            data/*.csv
