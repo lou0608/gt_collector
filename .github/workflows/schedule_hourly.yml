@@ -1,0 +1,74 @@
+name: Google Trends Hourly Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      hourly_mode:
+        description: "Mode d'exécution hourly: yesterday (par défaut) ou bootstrap (à lancer une seule fois si besoin)"
+        required: false
+        default: "yesterday"
+  schedule:
+    - cron: "0 8 * * *"    # 08:00 UTC / 10:00 Paris
+
+env:
+  PYTHONUNBUFFERED: "1"
+  GT_NO_DOCKER: "1"
+  RUN_TOPIC_MID: "/m/0k95h"   # MID pour 'hypertension'
+  # Réglages anti-runs interminables
+  GT_MAX_CALLS: "20"
+  GT_RETRIES: "3"
+  GT_BASE_BACKOFF: "10"
+  GT_PREJITTER_MIN: "1"
+  GT_PREJITTER_MAX: "3"
+  # Par défaut on utilise yesterday ; tu peux le surcharger côté "Run workflow" (input hourly_mode)
+  HOURLY_MODE: ${{ github.event.inputs.hourly_mode || 'yesterday' }}
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prepare data directories
+        run: |
+          mkdir -p data/logs
+          mkdir -p data/raw/hourly
+
+      - name: Run HOURLY 7d
+        run: |
+          python -m app.run_topic --topic-mid "${RUN_TOPIC_MID}" --topic-label "hypertension" --only-hourly --hourly-mode "${HOURLY_MODE}"
+
+      # SUPERVISION 1 : agrégats de logs
+      - name: Aggregate logs (summaries)
+        run: |
+          python -m app.tools.aggregate_logs || true
+
+      # SUPERVISION 2 : healthcheck (échoue si seuils dépassés)
+      - name: Healthcheck (fail the job if bad)
+        env:
+          HC_MAX_ERR_RATE: "0.9"
+          HC_REQUIRE_TODAY: "0"
+        run: |
+          python -m app.tools.healthcheck
+
+      - name: Upload CSV artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trends-hourly
+          if-no-files-found: warn
+          path: |
+            data/**/*.csv
+            data/*.csv
