@@ -7,8 +7,8 @@ on:
         description: "Mode d'exécution hourly: yesterday (par défaut) ou bootstrap (à lancer une seule fois si besoin)"
         required: false
         default: "yesterday"
-  schedule:
-    - cron: "0 9 * * *"    # 09:00 UTC / 11:00 Paris
+  #schedule:
+    #- cron: "0 9 * * *"    # 09:00 UTC / 11:00 Paris
 
 env:
   PYTHONUNBUFFERED: "1"
