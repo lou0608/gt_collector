@@ -1,7 +1,11 @@
-name: CI-CD (manual only)
+name: CI-CD
 
 on:
-  workflow_dispatch:   # <-- déclenchement uniquement manuel
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:   # <-- déclenchement manuel toujours possible
 
 jobs:
   ci:
@@ -13,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.9"   # compatible avec ton run_topic corrigé
 
       - name: Install dependencies
         run: |
@@ -25,10 +29,16 @@ jobs:
           pip install ruff
           ruff check . --line-length=120 --ignore F401,F841,F811
 
+      - name: Basic test - run_topic compiles
+        run: python -m py_compile app/run_topic.py
+
+      - name: Basic test - topics.txt exists
+        run: test -f config/topics.txt
+
   build-and-push:
     needs: ci
     runs-on: ubuntu-latest
-    if: success()     # seulement si la CI passe
+    if: success()
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,7 +49,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: success()     # seulement si le build passe
+    if: success()
     steps:
       - name: Deploy
         run: echo "Deploy step (placeholder)"
