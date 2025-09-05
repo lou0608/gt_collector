@@ -3,8 +3,12 @@ name: CI
 on:
   push:
     branches:
-      - feat/hourly-flags   # tu peux ajouter main ou d'autres branches si besoin
-  pull_request:              # vérifie aussi lors des PR
+      - main
+      - feat/hourly-flags   # tu peux en garder d'autres si besoin
+  pull_request:
+    branches:
+      - main
+      - feat/hourly-flags
 
 jobs:
   lint-and-test:
