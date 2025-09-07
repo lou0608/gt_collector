@@ -7,7 +7,7 @@ on:
 
 env:
   PYTHONUNBUFFERED: "1"
-  GT_MAX_CALLS: "2"     # limite d’appels par run
+  GT_MAX_CALLS: "20"     # limite d’appels par run
   GT_GEO: "FR"
 
 jobs:
