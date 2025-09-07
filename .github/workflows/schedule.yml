@@ -57,16 +57,28 @@ jobs:
           # Revenir sur la branche principale pour accéder aux nouveaux fichiers
           git checkout main
           
-          # Concaténer anciens + nouveaux (en enlevant l’entête des anciens)
+          # Concaténation : anciens + nouveaux (dans des fichiers temporaires)
           if [ -f old_topics_all.csv ]; then
-            tail -n +2 old_topics_all.csv >> data/processed/topics_all.csv
+            head -n 1 data/processed/topics_all.csv > merged_topics_all.csv   # garder l'en-tête
+            tail -n +2 old_topics_all.csv >> merged_topics_all.csv           # anciennes lignes sans en-tête
+            tail -n +2 data/processed/topics_all.csv >> merged_topics_all.csv # nouvelles lignes sans en-tête
+            mv merged_topics_all.csv data/processed/topics_all.csv
           fi
+
           if [ -f old_calls_all.csv ]; then
-            tail -n +2 old_calls_all.csv >> data/logs/calls_all.csv
+            head -n 1 data/logs/calls_all.csv > merged_calls_all.csv
+            tail -n +2 old_calls_all.csv >> merged_calls_all.csv
+            tail -n +2 data/logs/calls_all.csv >> merged_calls_all.csv
+            mv merged_calls_all.csv data/logs/calls_all.csv
           fi
+
           if [ -f old_meter.csv ]; then
-            tail -n +2 old_meter.csv >> data/logs/meter.csv
+            head -n 1 data/logs/meter.csv > merged_meter.csv
+            tail -n +2 old_meter.csv >> merged_meter.csv
+            tail -n +2 data/logs/meter.csv >> merged_meter.csv
+            mv merged_meter.csv data/logs/meter.csv
           fi
+
 
       - name: Push CSV to data-branch
         run: |
