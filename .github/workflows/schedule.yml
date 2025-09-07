@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # important pour accéder à toutes les branches
 
       - name: Set up Docker
         uses: docker/setup-buildx-action@v3
@@ -41,20 +43,43 @@ jobs:
             data/**/*.csv
             data/*.csv
 
+      - name: Merge old CSV with new
+        run: |
+          # Récupérer la dernière version de data-branch si elle existe
+          git fetch origin data-branch || true
+          git checkout data-branch || git checkout -b data-branch
+          
+          # Sauvegarder les anciens fichiers s’ils existent
+          cp topics_all.csv old_topics_all.csv 2>/dev/null || true
+          cp calls_all.csv old_calls_all.csv 2>/dev/null || true
+          cp meter.csv old_meter.csv 2>/dev/null || true
+
+          # Revenir sur la branche principale pour accéder aux nouveaux fichiers
+          git checkout main
+          
+          # Concaténer anciens + nouveaux (en enlevant l’entête des anciens)
+          if [ -f old_topics_all.csv ]; then
+            tail -n +2 old_topics_all.csv >> data/processed/topics_all.csv
+          fi
+          if [ -f old_calls_all.csv ]; then
+            tail -n +2 old_calls_all.csv >> data/logs/calls_all.csv
+          fi
+          if [ -f old_meter.csv ]; then
+            tail -n +2 old_meter.csv >> data/logs/meter.csv
+          fi
+
       - name: Push CSV to data-branch
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
 
-          git fetch origin
           git checkout -B data-branch
 
-          # Copier les fichiers clés pour Power BI
+          # Copier les fichiers cumulés pour Power BI
           cp data/processed/topics_all.csv .
           cp data/logs/calls_all.csv .
           cp data/logs/meter.csv .
 
           git add -f *.csv || true
           git commit -m "Update CSV from $(date)" || echo "No changes to commit"
-
           git push origin data-branch --force
