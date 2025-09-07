@@ -40,3 +40,21 @@ jobs:
           path: |
             data/**/*.csv
             data/*.csv
+
+      - name: Push CSV to data-branch
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+
+          git fetch origin
+          git checkout -B data-branch
+
+          # Copier les fichiers clés pour Power BI
+          cp data/processed/topics_all.csv .
+          cp data/logs/calls_all.csv .
+          cp data/logs/meter.csv .
+
+          git add *.csv || true
+          git commit -m "Update CSV from $(date)" || echo "No changes to commit"
+
+          git push origin data-branch --force
