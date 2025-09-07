@@ -13,11 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Code applicatif
 COPY app/ ./app
-COPY scripts/ ./scripts  
-COPY logs/ ./logs         
+COPY scripts/ ./scripts
 
-# Healthcheck (si app.healthcheck existe vraiment)
-HEALTHCHECK --interval=5m --timeout=10s CMD python -m app.healthcheck || exit 1
+# Healthcheck : vérifie toutes les 2 minutes, tolère 2 échecs, timeout 10s
+HEALTHCHECK --interval=2m --timeout=10s --retries=2 \
+    CMD python -m app.tools.healthcheck || exit 1
 
 # Commande par défaut (sera écrasée par `docker compose run ...`)
 CMD ["python", "-m", "app.main"]
