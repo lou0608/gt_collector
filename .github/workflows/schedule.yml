@@ -54,34 +54,38 @@ jobs:
           cp calls_all.csv old_calls_all.csv 2>/dev/null || true
           cp meter.csv old_meter.csv 2>/dev/null || true
 
-          # Revenir sur la branche principale pour accéder aux nouveaux fichiers
+          # Revenir sur la branche principale pour copier les nouveaux fichiers
           git checkout main
 
-          # Forcer les droits d'écriture
-          chmod -R 777 data/
+          # Copier les nouveaux fichiers générés par Docker à la racine
+          cp data/processed/topics_all.csv new_topics_all.csv
+          cp data/logs/calls_all.csv new_calls_all.csv
+          cp data/logs/meter.csv new_meter.csv
           
-          # Concaténation : anciens + nouveaux (dans des fichiers temporaires)
+          # Concaténation : anciens + nouveaux
           if [ -f old_topics_all.csv ]; then
-            head -n 1 data/processed/topics_all.csv > merged_topics_all.csv   # garder l'en-tête
-            tail -n +2 old_topics_all.csv >> merged_topics_all.csv           # anciennes lignes sans en-tête
-            tail -n +2 data/processed/topics_all.csv >> merged_topics_all.csv # nouvelles lignes sans en-tête
-            mv merged_topics_all.csv data/processed/topics_all.csv
+            head -n 1 new_topics_all.csv > topics_all.csv
+            tail -n +2 old_topics_all.csv >> topics_all.csv
+            tail -n +2 new_topics_all.csv >> topics_all.csv
+          else
+            mv new_topics_all.csv topics_all.csv
           fi
 
           if [ -f old_calls_all.csv ]; then
-            head -n 1 data/logs/calls_all.csv > merged_calls_all.csv
-            tail -n +2 old_calls_all.csv >> merged_calls_all.csv
-            tail -n +2 data/logs/calls_all.csv >> merged_calls_all.csv
-            mv merged_calls_all.csv data/logs/calls_all.csv
+            head -n 1 new_calls_all.csv > calls_all.csv
+            tail -n +2 old_calls_all.csv >> calls_all.csv
+            tail -n +2 new_calls_all.csv >> calls_all.csv
+          else
+            mv new_calls_all.csv calls_all.csv
           fi
 
           if [ -f old_meter.csv ]; then
-            head -n 1 data/logs/meter.csv > merged_meter.csv
-            tail -n +2 old_meter.csv >> merged_meter.csv
-            tail -n +2 data/logs/meter.csv >> merged_meter.csv
-            mv merged_meter.csv data/logs/meter.csv
+            head -n 1 new_meter.csv > meter.csv
+            tail -n +2 old_meter.csv >> meter.csv
+            tail -n +2 new_meter.csv >> meter.csv
+          else
+            mv new_meter.csv meter.csv
           fi
-
 
       - name: Push CSV to data-branch
         run: |
@@ -90,11 +94,7 @@ jobs:
 
           git checkout -B data-branch
 
-          # Copier les fichiers cumulés pour Power BI
-          cp data/processed/topics_all.csv .
-          cp data/logs/calls_all.csv .
-          cp data/logs/meter.csv .
-
-          git add -f *.csv || true
+          # Pousser les fichiers cumulés pour Power BI
+          git add -f topics_all.csv calls_all.csv meter.csv || true
           git commit -m "Update CSV from $(date)" || echo "No changes to commit"
           git push origin data-branch --force
