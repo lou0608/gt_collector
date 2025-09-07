@@ -1,4 +1,5 @@
-# app/run_topic.py
+from app.normalize import normalize_daily
+from app.callmeter import log_call, CallBudget, METER_PATH
 import os
 import uuid
 import random
@@ -10,125 +11,88 @@ import pandas as pd
 import pytz
 from pytrends.request import TrendReq
 from pytrends import exceptions as pt_exceptions
-from typing import Optional  # ✅ pour compatibilité Python 3.9
-
-from app.callmeter import log_call, CallBudget, METER_PATH
-from app.normalize import normalize_daily
+from typing import Optional
+import warnings
+warnings.filterwarnings(
+    "ignore",
+    message="Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated"
+)
 
 # ====== Config ======
-if os.getenv("GITHUB_ACTIONS") == "true":
-    BASEDIR = Path("data")
+if os.getenv("OUTDIR"):
+    BASEDIR = Path(os.getenv("OUTDIR"))
 else:
-    BASEDIR = Path(os.getenv("OUTDIR", "/data"))
+    BASEDIR = Path("/data")  # par défaut : ./data dans le projet
 
-RAWDIR = BASEDIR / "raw"
-DAILYDIR = RAWDIR / "daily"
+PROCESSED_DIR = BASEDIR / "processed"
 LOGSDIR = BASEDIR / "logs"
+CONFIGDIR = BASEDIR / "config"
 
-for d in (RAWDIR, DAILYDIR, LOGSDIR):
+for d in (PROCESSED_DIR, LOGSDIR, CONFIGDIR):
     d.mkdir(parents=True, exist_ok=True)
+
+# Fichiers uniques
+TOPICS_ALL_PATH = PROCESSED_DIR / "topics_all.csv"
+CALLS_ALL_PATH = LOGSDIR / "calls_all.csv"
 
 GEO = os.getenv("GT_GEO", "FR")
 MAX_CALLS = int(os.getenv("GT_MAX_CALLS", "3"))
 RUN_ID = os.getenv("RUN_ID", str(uuid.uuid4())[:8])
 
-PREJITTER_MIN = float(os.getenv("GT_PREJITTER_MIN", "3"))
-PREJITTER_MAX = float(os.getenv("GT_PREJITTER_MAX", "12"))
+# délais d’attente (élargis)
+SLEEP_MIN = 15
+SLEEP_MAX = 45
 
 BUDGET = CallBudget(max_calls=MAX_CALLS, run_id=RUN_ID)
 pytrends = TrendReq(hl="fr-FR", tz=0)
 
 
-def _slugify(label: str) -> str:
-    return "".join(ch.lower() if ch.isalnum() else "-" for ch in label).strip("-").replace("--", "-")
-
-
 def _safe_build(topic: str, timeframe: str, phase: str) -> bool:
-    RETRIES = int(os.getenv("GT_RETRIES", "6"))
-    BASE_BACKOFF = float(os.getenv("GT_BASE_BACKOFF", "20.0"))
-
-    pre_sleep = random.uniform(PREJITTER_MIN, PREJITTER_MAX)
-    sleep(pre_sleep)
-
-    kws = [topic]
-    for attempt in range(1, RETRIES + 1):
-        try:
-            BUDGET.hit()
-            pytrends.build_payload(kws, timeframe=timeframe, geo=GEO)
-            log_call(RUN_ID, phase, topic, timeframe, GEO, attempt, "ok", "")
-            sleep(random.uniform(8, 20))
-            return True
-        except pt_exceptions.TooManyRequestsError:
-            log_call(RUN_ID, phase, topic, timeframe, GEO,
-                     attempt, "429", "TooManyRequests(build)")
-            if attempt < RETRIES:
-                sleep_time = BASE_BACKOFF * \
-                    (2 ** (attempt - 1)) + random.uniform(5, 20)
-                print(
-                    f"[429] build_payload: backoff {sleep_time:.1f}s (tentative {attempt}/{RETRIES})…")
-                sleep(sleep_time)
-                continue
-            else:
-                print("[ERR] build_payload: abandon après multiples 429")
-                return False
-        except Exception as e:
-            log_call(RUN_ID, phase, topic, timeframe, GEO,
-                     attempt, "error", f"build:{type(e).__name__}: {e}")
-            if attempt < RETRIES:
-                sleep_time = (BASE_BACKOFF / 2) * \
-                    (2 ** (attempt - 1)) + random.uniform(3, 10)
-                print(
-                    f"[WARN] build_payload {type(e).__name__}: backoff {sleep_time:.1f}s (tentative {attempt}/{RETRIES})…")
-                sleep(sleep_time)
-                continue
-            else:
-                print(f"[ERR] build_payload: abandon après erreurs : {e}")
-                return False
+    """Un seul appel à build_payload, abandon immédiat si erreur."""
+    try:
+        BUDGET.hit()
+        pytrends.build_payload([topic], timeframe=timeframe, geo=GEO)
+        log_call(RUN_ID, phase, topic, timeframe,
+                 GEO, 1, "ok", "", CALLS_ALL_PATH)
+        sleep(random.uniform(SLEEP_MIN, SLEEP_MAX))
+        return True
+    except pt_exceptions.TooManyRequestsError:
+        log_call(RUN_ID, phase, topic, timeframe, GEO, 1, "429",
+                 "TooManyRequests(build)", CALLS_ALL_PATH)
+        print("[ERR] build_payload: 429 Too Many Requests → abandon immédiat")
+        return False
+    except Exception as e:
+        log_call(RUN_ID, phase, topic, timeframe, GEO, 1, "error",
+                 f"build:{type(e).__name__}: {e}", CALLS_ALL_PATH)
+        print(f"[ERR] build_payload: {e} → abandon immédiat")
+        return False
 
 
 def _safe_interest_over_time(topic: str, timeframe: str, phase: str) -> Optional[pd.DataFrame]:
-    RETRIES = int(os.getenv("GT_RETRIES", "6"))
-    BASE_BACKOFF = float(os.getenv("GT_BASE_BACKOFF", "20.0"))
-
-    for attempt in range(1, RETRIES + 1):
-        try:
-            BUDGET.hit()
-            df = pytrends.interest_over_time()
-            log_call(RUN_ID, phase + ":fetch", topic,
-                     timeframe, GEO, attempt, "ok", "")
-            sleep(random.uniform(5, 12))
-            return df
-        except pt_exceptions.TooManyRequestsError:
-            log_call(RUN_ID, phase + ":fetch", topic, timeframe,
-                     GEO, attempt, "429", "TooManyRequests(fetch)")
-            if attempt < RETRIES:
-                sleep_time = BASE_BACKOFF * \
-                    (2 ** (attempt - 1)) + random.uniform(5, 20)
-                print(
-                    f"[429] interest_over_time: backoff {sleep_time:.1f}s (tentative {attempt}/{RETRIES})…")
-                sleep(sleep_time)
-                continue
-            else:
-                print("[ERR] interest_over_time: abandon après multiples 429")
-                return None
-        except Exception as e:
-            log_call(RUN_ID, phase + ":fetch", topic, timeframe,
-                     GEO, attempt, "error", f"fetch:{type(e).__name__}: {e}")
-            if attempt < RETRIES:
-                sleep_time = (BASE_BACKOFF / 2) * \
-                    (2 ** (attempt - 1)) + random.uniform(3, 10)
-                print(
-                    f"[WARN] interest_over_time {type(e).__name__}: backoff {sleep_time:.1f}s (tentative {attempt}/{RETRIES})…")
-                sleep(sleep_time)
-                continue
-            else:
-                print(f"[ERR] interest_over_time: abandon après erreurs : {e}")
-                return None
+    """Un seul appel à interest_over_time, abandon immédiat si erreur."""
+    try:
+        BUDGET.hit()
+        df = pytrends.interest_over_time()
+        log_call(RUN_ID, phase + ":fetch", topic, timeframe,
+                 GEO, 1, "ok", "", CALLS_ALL_PATH)
+        sleep(random.uniform(SLEEP_MIN, SLEEP_MAX))
+        return df
+    except pt_exceptions.TooManyRequestsError:
+        log_call(RUN_ID, phase + ":fetch", topic, timeframe, GEO,
+                 1, "429", "TooManyRequests(fetch)", CALLS_ALL_PATH)
+        print("[ERR] interest_over_time: 429 Too Many Requests → abandon immédiat")
+        return None
+    except Exception as e:
+        log_call(RUN_ID, phase + ":fetch", topic, timeframe, GEO, 1,
+                 "error", f"fetch:{type(e).__name__}: {e}", CALLS_ALL_PATH)
+        print(f"[ERR] interest_over_time: {e} → abandon immédiat")
+        return None
 
 
-def _write_daily(topic: str, run_date: str):
+def _write_daily(topic: str):
     phase = "daily"
     tf = "today 5-y"
+
     if not _safe_build(topic, tf, phase):
         print(f"[WARN] daily KO ({topic})")
         return
@@ -146,20 +110,27 @@ def _write_daily(topic: str, run_date: str):
         window="5y",
     )
 
-    slug = _slugify(topic)
-    out = DAILYDIR / f"daily__{slug}__{run_date}.csv"
-    df_norm.to_csv(out, index=False, encoding="utf-8")
-    print(f"[OK] daily → {out} ({len(df_norm)} lignes)")
+    # Append dans topics_all.csv
+    file_exists = TOPICS_ALL_PATH.exists()
+    df_norm["topic"] = topic
+    df_norm["ts_utc_extraction"] = datetime.utcnow().strftime(
+        "%Y-%m-%d %H:%M:%S")
+    df_norm.to_csv(
+        TOPICS_ALL_PATH,
+        mode="a",
+        header=not file_exists,
+        index=False,
+        encoding="utf-8"
+    )
+    print(f"[OK] daily → {TOPICS_ALL_PATH} (+{len(df_norm)} lignes)")
 
 
 def main():
     ap = argparse.ArgumentParser(
         description="Collecte Google Trends — daily only, multi-topics")
-    ap.add_argument("--topics-file", default="config/topics.txt",
+    ap.add_argument("--topics-file", default=str(CONFIGDIR / "topics.txt"),
                     help="Fichier listant les topics (un par ligne)")
     args = ap.parse_args()
-
-    run_date = datetime.now(pytz.timezone("Europe/Paris")).strftime("%Y%m%d")
 
     topics_path = Path(args.topics_file)
     if not topics_path.exists():
@@ -170,7 +141,7 @@ def main():
         encoding="utf-8").splitlines() if line.strip()]
 
     for topic in topics:
-        _write_daily(topic, run_date)
+        _write_daily(topic)
 
     print(f"[METER] calls={BUDGET.count} (voir {METER_PATH})")
 

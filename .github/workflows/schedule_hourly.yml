@@ -15,7 +15,7 @@ env:
   GT_NO_DOCKER: "1"
   RUN_TOPIC_MID: "/m/0k95h"   # MID pour 'hypertension'
   # Réglages anti-runs interminables
-  GT_MAX_CALLS: "20"
+  GT_MAX_CALLS: "2"
   GT_RETRIES: "6"             # plus de tentatives
   GT_BASE_BACKOFF: "30"       # attente plus longue entre les tentatives
   GT_PREJITTER_MIN: "1"

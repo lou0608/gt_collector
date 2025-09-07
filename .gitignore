@@ -14,6 +14,8 @@ data/logs/*
 # Autoriser les fichiers “meta”
 !data/meta/**
 
+# Airflow logs
+airflow/logs/
 
 # --- Python ---
 __pycache__/

@@ -7,14 +7,8 @@ on:
 
 env:
   PYTHONUNBUFFERED: "1"
-  GT_NO_DOCKER: "1"
-  RUN_TOPIC_MID: "/m/0k95h"   # MID pour 'hypertension'
-  # Réglages pour éviter les runs trop longs
-  GT_MAX_CALLS: "20"
-  GT_RETRIES: "3"
-  GT_BASE_BACKOFF: "10"
-  GT_PREJITTER_MIN: "1"
-  GT_PREJITTER_MAX: "3"
+  GT_MAX_CALLS: "2"     # limite d’appels par run
+  GT_GEO: "FR"
 
 jobs:
   run-pipeline:
@@ -25,38 +19,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Build images
+        run: docker compose build
 
-      - name: Prepare data directories
+      - name: Run full pipeline (run_all)
         run: |
-          mkdir -p data/logs
-          mkdir -p data/raw/daily
-          mkdir -p data/raw/hourly
-
-      - name: Run DAILY only (no hourly)
-        run: |
-          python -m app.tools.run_daily_only --topic-mid "${RUN_TOPIC_MID}" --topic-label "hypertension"
-
-      # Étape SUPERVISION 1 : résumés d’appels et quotas
-      - name: Aggregate logs (summaries)
-        run: |
-          python -m app.tools.aggregate_logs || true
-
-      # Étape SUPERVISION 2 : contrôle qualité (échoue si seuils dépassés)
-      - name: Healthcheck (fail the job if bad)
-        env:
-          HC_MAX_ERR_RATE: "0.9"   # tolère jusqu'à 90% d'erreurs
-          HC_REQUIRE_TODAY: "0"    # en démo, n’exige pas les données du jour
-        run: |
-          python -m app.tools.healthcheck
+          docker compose run --rm \
+            -e GT_MAX_CALLS=${GT_MAX_CALLS} \
+            -e GT_GEO=${GT_GEO} \
+            gt-collector python -u scripts/run_all.py
 
       - name: Upload CSV artifacts
         uses: actions/upload-artifact@v4

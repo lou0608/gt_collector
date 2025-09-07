@@ -1,4 +1,3 @@
-# app/callmeter.py
 from __future__ import annotations
 
 import os
@@ -8,30 +7,32 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 # --- Répertoires & fichiers de log ---
-# On choisit le répertoire en fonction de l'environnement :
-# - En GitHub Actions : ./data/logs (dans le repo, artefacts faciles à uploader)
-# - Sinon (Docker/local) : /data/logs (cohérent avec les montages Docker)
-
-if os.getenv("GITHUB_ACTIONS") == "true":
-    BASEDIR = Path("data")
+if os.getenv("OUTDIR"):
+    BASEDIR = Path(os.getenv("OUTDIR"))
 else:
-    BASEDIR = Path(os.getenv("OUTDIR", "/data"))
+    BASEDIR = Path("/data")  # par défaut : /data dans Docker / Actions
 
 LOGDIR = BASEDIR / "logs"
-LOGDIR.mkdir(parents=True, exist_ok=True)
+CONFIGDIR = BASEDIR / "config"
+PROCESSED_DIR = BASEDIR / "processed"
 
-# 1) Journal détaillé de chaque appel pytrends (roté quotidiennement)
-CALLS_CSV = LOGDIR / f"calls__{datetime.now().strftime('%Y%m%d')}.csv"
+for d in (LOGDIR, CONFIGDIR, PROCESSED_DIR):
+    d.mkdir(parents=True, exist_ok=True)
 
-# 2) Jauge/budget des appels (append, simple à grafer)
-METER_PATH = LOGDIR / "meter.csv"  # <--- utilisé par run_topic.py pour affichage
+# 1) Journal détaillé de chaque appel pytrends
+CALLS_ALL_PATH = LOGDIR / "calls_all.csv"
+CALLS_DAILY_PATH = LOGDIR / \
+    f"calls__{datetime.utcnow().strftime('%Y%m%d')}.csv"
+
+# 2) Jauge/budget des appels
+METER_PATH = LOGDIR / "meter.csv"  # <--- utilisé par run_topic.py
 
 CALLS_HEADERS = [
     "ts_utc",       # 2025-09-01T08:12:34Z
     "run_id",       # identifiant du run (RUN_ID)
-    "phase",        # daily_2024, hourly_7d_bootstrap, hourly_yesterday, ...
-    "topic_mid",    # /m/01l2m3
-    "timeframe",    # 2024-01-01 2024-12-31, now 7-d, ...
+    "phase",        # daily, hourly, ...
+    "topic_mid",    # mot-clé
+    "timeframe",    # now 7-d, today 5-y, ...
     "geo",          # FR, "", ...
     "attempt",      # tentative n
     "status",       # ok | 429 | error
@@ -58,18 +59,15 @@ def _ensure_file_with_header(path: Path, headers: list[str]) -> None:
             writer.writerow(headers)
 
 
-# S’assurer que les fichiers (du jour) existent avec leurs en-têtes
-_ensure_file_with_header(CALLS_CSV, CALLS_HEADERS)
+# S’assurer que les fichiers existent avec leurs en-têtes
+_ensure_file_with_header(CALLS_ALL_PATH, CALLS_HEADERS)
+_ensure_file_with_header(CALLS_DAILY_PATH, CALLS_HEADERS)
 _ensure_file_with_header(METER_PATH, METER_HEADERS)
 
 
 @dataclass
 class CallBudget:
-    """Compteur d’appels pour éviter les 429.
-    - max_calls: nombre d’appels autorisés pour ce process
-    - count: compteur courant (auto-incrémenté par hit())
-    À chaque hit(), on logge un point dans meter.csv pour faciliter le monitoring.
-    """
+    """Compteur d’appels pour éviter les 429."""
     max_calls: int
     run_id: str | None = None
     count: int = 0
@@ -98,9 +96,10 @@ def log_call(run_id: str,
              geo: str,
              attempt: int,
              status: str,
-             error: str = "") -> None:
+             error: str = "",
+             path: Path | None = None) -> None:
     """Écrit une ligne de log pour un appel pytrends (succès / 429 / erreur)."""
-    # Sanitize pour éviter de casser la CSV
+
     error = (error or "").replace("\n", " ").replace("\r", " ")[:500]
     row = [
         _ts_utc(),
@@ -113,6 +112,21 @@ def log_call(run_id: str,
         status,
         error,
     ]
-    with CALLS_CSV.open("a", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(row)
+
+    # écrit toujours dans calls_all.csv et calls__YYYYMMDD.csv
+    for target in [CALLS_ALL_PATH, CALLS_DAILY_PATH]:
+        file_exists = target.exists()
+        with target.open("a", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(CALLS_HEADERS)
+            writer.writerow(row)
+
+    # Si l'appel est explicitement redirigé vers un autre fichier
+    if path and path not in (CALLS_ALL_PATH, CALLS_DAILY_PATH):
+        file_exists = path.exists()
+        with path.open("a", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(CALLS_HEADERS)
+            writer.writerow(row)
