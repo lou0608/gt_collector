@@ -56,6 +56,9 @@ jobs:
 
           # Revenir sur la branche principale pour accéder aux nouveaux fichiers
           git checkout main
+
+          # Forcer les droits d'écriture
+          chmod -R 777 data/
           
           # Concaténation : anciens + nouveaux (dans des fichiers temporaires)
           if [ -f old_topics_all.csv ]; then
