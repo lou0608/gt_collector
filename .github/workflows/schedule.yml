@@ -57,33 +57,39 @@ jobs:
           # Revenir sur la branche principale pour copier les nouveaux fichiers
           git checkout main
 
-          # Copier les nouveaux fichiers générés par Docker à la racine
-          cp data/processed/topics_all.csv new_topics_all.csv
-          cp data/logs/calls_all.csv new_calls_all.csv
-          cp data/logs/meter.csv new_meter.csv
+          # Copier les nouveaux fichiers générés par Docker à la racine (sécurisé + warning)
+          if ! cp data/processed/topics_all.csv new_topics_all.csv 2>/dev/null; then
+            echo "::warning::Pas de topics_all.csv généré"
+          fi
+          if ! cp data/logs/calls_all.csv new_calls_all.csv 2>/dev/null; then
+            echo "::warning::Pas de calls_all.csv généré"
+          fi
+          if ! cp data/logs/meter.csv new_meter.csv 2>/dev/null; then
+            echo "::warning::Pas de meter.csv généré"
+          fi
           
-          # Concaténation : anciens + nouveaux
-          if [ -f old_topics_all.csv ]; then
+          # Concaténation : anciens + nouveaux (seulement si new_* existe)
+          if [ -f old_topics_all.csv ] && [ -f new_topics_all.csv ]; then
             head -n 1 new_topics_all.csv > topics_all.csv
             tail -n +2 old_topics_all.csv >> topics_all.csv
             tail -n +2 new_topics_all.csv >> topics_all.csv
-          else
+          elif [ -f new_topics_all.csv ]; then
             mv new_topics_all.csv topics_all.csv
           fi
 
-          if [ -f old_calls_all.csv ]; then
+          if [ -f old_calls_all.csv ] && [ -f new_calls_all.csv ]; then
             head -n 1 new_calls_all.csv > calls_all.csv
             tail -n +2 old_calls_all.csv >> calls_all.csv
             tail -n +2 new_calls_all.csv >> calls_all.csv
-          else
+          elif [ -f new_calls_all.csv ]; then
             mv new_calls_all.csv calls_all.csv
           fi
 
-          if [ -f old_meter.csv ]; then
+          if [ -f old_meter.csv ] && [ -f new_meter.csv ]; then
             head -n 1 new_meter.csv > meter.csv
             tail -n +2 old_meter.csv >> meter.csv
             tail -n +2 new_meter.csv >> meter.csv
-          else
+          elif [ -f new_meter.csv ]; then
             mv new_meter.csv meter.csv
           fi
 
