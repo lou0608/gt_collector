@@ -2,8 +2,8 @@ name: Google Trends Daily Pipeline
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * *"    # 04:00 UTC / 06:00 Paris
+ # schedule:
+ #   - cron: "0 4 * * *"    # 04:00 UTC / 06:00 Paris
 
 env:
   PYTHONUNBUFFERED: "1"
