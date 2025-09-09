@@ -1,0 +1,5 @@
+ts_utc,run_id,phase,topic_mid,timeframe,geo,attempt,status,error
+2025-09-09T04:28:05Z,4271efae,daily,Bradycardie,today 5-y,FR,1,ok,
+2025-09-09T04:28:30Z,4271efae,daily:fetch,Bradycardie,today 5-y,FR,1,ok,
+2025-09-09T04:29:10Z,4271efae,daily,Stent,today 5-y,FR,1,ok,
+2025-09-09T04:29:28Z,4271efae,daily:fetch,Stent,today 5-y,FR,1,ok,
