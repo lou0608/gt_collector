@@ -36,7 +36,7 @@ TOPICS_ALL_PATH = PROCESSED_DIR / "topics_all.csv"
 CALLS_ALL_PATH = LOGSDIR / "calls_all.csv"
 
 GEO = os.getenv("GT_GEO", "FR")
-MAX_CALLS = int(os.getenv("GT_MAX_CALLS", "4"))
+MAX_CALLS = int(os.getenv("GT_MAX_CALLS", "2"))
 RUN_ID = os.getenv("RUN_ID", str(uuid.uuid4())[:8])
 
 # délais d’attente (élargis)
