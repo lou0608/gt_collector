@@ -3,20 +3,33 @@ name: Google Trends Daily Pipeline
 on:
   workflow_dispatch:
   schedule:
-    # Tous les jours à 11h (heure Paris = 9h UTC)
+    # 09:00 UTC = 11:00 Paris
     - cron: "0 9 * * *"
+
+env:
+  PYTHONUNBUFFERED: "1"
+  GT_MAX_CALLS: "2"     # limiter les appels API pour éviter les 429
+  GT_GEO: "FR"
+  PYTHONPATH: "."
+  OUTDIR: "data"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gt_schedule_new
+  cancel-in-progress: false
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-
-    env:
-      PYTHONUNBUFFERED: "1"
-      PYTHONPATH: "."
+    timeout-minutes: 25
 
     steps:
-      - name: Checkout main repo
+      - name: Checkout main (code)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -25,13 +38,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
 
-      - name: Prepare folders
-        run: |
-          mkdir -p data/logs data/processed data/config data/state
+      - name: Ensure data dirs
+        run: mkdir -p data/logs data/processed data/config data/state
 
-      - name: Checkout data branch
+      # Récupérer la branche data-branch (historique outputs + state)
+      - name: Checkout data-branch
         uses: actions/checkout@v4
         with:
           ref: data-branch
@@ -40,9 +55,10 @@ jobs:
       - name: Restore topic pointer
         run: |
           if [ -f data-branch/data/state/topic_pointer.json ]; then
-            cp data-branch/data/state/topic_pointer.json data/state/topic_pointer.json
+            cp data-branch/data/state/topic_pointer.json data/state/
           fi
 
+      # Orchestrateur : next_topic + run_topic + aggregate_calls_meter
       - name: Run orchestrator (topics + logs)
         env:
           OUTDIR: ${{ github.workspace }}/data-branch/data
@@ -50,17 +66,22 @@ jobs:
         run: |
           python -m app.run_all
 
-      - name: Upload artifacts
+      - name: Upload CSV artifacts
         uses: actions/upload-artifact@v4
         with:
           name: trends-csv
+          if-no-files-found: warn
           path: data-branch/data/processed/*.csv
 
       - name: Commit & push results to data-branch
         run: |
           cd data-branch
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/processed/*.csv data/state/topic_pointer.json
-          git commit -m "GT: $(date +'%Y-%m-%d') orchestrator run"
-          git push origin data-branch
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f data/processed data/state || true
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+          else
+            git commit -m "GT: $(date -u +'%Y-%m-%d') orchestrator run"
+            git push origin HEAD:data-branch
+          fi
