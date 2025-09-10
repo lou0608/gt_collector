@@ -20,12 +20,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
-
 def run_step(description: str, cmd: list[str]) -> None:
     print(f"\n== {description} ==")
     print(" ".join(cmd))
     subprocess.run(cmd, check=True)
-
 
 def safe_copy(src: Path, dst: Path, label: str) -> None:
     if src.exists():
@@ -35,13 +33,11 @@ def safe_copy(src: Path, dst: Path, label: str) -> None:
     else:
         print(f"[SYNC {label}] Source absente : {src}")
 
-
 def read_str(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8").strip()
     except Exception:
         return ""
-
 
 def main() -> None:
     # Racine du repo (gt_collector/)
@@ -57,8 +53,7 @@ def main() -> None:
     safe_copy(topics_src, topics_dst, "TOPICS")
 
     # 2) Sélection du prochain topic
-    run_step("Sélection du prochain topic", [
-             sys.executable, "-m", "app.next_topic"])
+    run_step("Sélection du prochain topic", [sys.executable, "-m", "app.next_topic"])
 
     # 3) Synchroniser _current_topic.txt vers OUTDIR
     current_src = repo / "data" / "config" / "_current_topic.txt"
@@ -71,16 +66,13 @@ def main() -> None:
     # 4) Collecte (lecture forcée via --topics-file pointant OUTDIR)
     run_step(
         "Collecte (run_topic)",
-        [sys.executable, "-m", "app.run_topic",
-            "--topics-file", str(current_dst)],
+        [sys.executable, "-m", "app.run_topic", "--topics-file", str(current_dst)],
     )
 
     # 5) Agrégation des logs
-    run_step("Agrégation des logs", [
-             sys.executable, "-m", "app.aggregate_calls_meter"])
+    run_step("Agrégation des logs", [sys.executable, "-m", "app.aggregate_calls_meter"])
 
     print("\nPipeline terminé.")
-
 
 if __name__ == "__main__":
     try:
