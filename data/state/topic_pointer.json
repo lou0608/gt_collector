@@ -1,5 +1,5 @@
 {
-  "index": 0,
+  "index": 1,
   "history": [
     {
       "ts_utc": "2025-09-10T08:32:35.716954+00:00",
@@ -41,6 +41,12 @@
       "ts_utc": "2025-09-10T14:12:19.657536+00:00",
       "topic": "Bradycardie",
       "index": 0,
+      "total_topics": 2
+    },
+    {
+      "ts_utc": "2025-09-10T14:40:50.593788+00:00",
+      "topic": "Myocarde",
+      "index": 1,
       "total_topics": 2
     }
   ]
