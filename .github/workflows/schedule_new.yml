@@ -45,6 +45,19 @@ jobs:
       - name: Ensure data dirs
         run: mkdir -p data/logs data/processed data/config data/state
 
+      # 🔥 Nouvelle étape : restaurer le pointeur depuis data-branch
+      - name: Checkout data-branch (pointer state)
+        uses: actions/checkout@v4
+        with:
+          ref: data-branch
+          path: data-branch
+
+      - name: Restore topic pointer
+        run: |
+          if [ -f data-branch/data/state/topic_pointer.json ]; then
+            cp data-branch/data/state/topic_pointer.json data/state/
+          fi
+
       - name: Select next topic (persist pointer)
         id: pick
         run: |
