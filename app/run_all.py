@@ -3,7 +3,7 @@
 Orchestration locale/CI :
 1) SYNC topics.txt -> OUTDIR/config
 2) Choisit le prochain topic (app.next_topic)
-3) SYNC _current_topic.txt -> OUTDIR/config
+3) Lit le topic courant depuis OUTDIR/config/_current_topic.txt
 4) Lance la collecte (app.run_topic)
 5) Agrège les logs (app.aggregate_calls_meter)
 
@@ -44,10 +44,7 @@ def read_str(path: Path) -> str:
 
 
 def main() -> None:
-    # Racine du repo (gt_collector/)
     repo = Path(__file__).resolve().parents[1]
-
-    # OUTDIR : override en CI (ex: data-branch/data), fallback local = repo/data
     outdir = Path(os.getenv("OUTDIR", repo / "data"))
     (outdir / "config").mkdir(parents=True, exist_ok=True)
 
@@ -56,23 +53,23 @@ def main() -> None:
     topics_dst = outdir / "config" / "topics.txt"
     safe_copy(topics_src, topics_dst, "TOPICS")
 
-    # 2) Sélection du prochain topic
+    # 2) Sélection du prochain topic (écrit OUTDIR/_current_topic.txt)
     run_step("Sélection du prochain topic", [
              sys.executable, "-m", "app.next_topic"])
 
-    # 3) Synchroniser _current_topic.txt vers OUTDIR
-    current_src = repo / "data" / "config" / "_current_topic.txt"
-    current_dst = outdir / "config" / "_current_topic.txt"
-    safe_copy(current_src, current_dst, "CURRENT")
+    # 3) Lire le topic courant depuis OUTDIR
+    current_file = outdir / "config" / "_current_topic.txt"
+    if not current_file.exists():
+        raise FileNotFoundError(
+            f"_current_topic.txt introuvable dans {current_file} (next_topic a-t-il tourné ?)")
+    print(
+        f"[CHECK] Topic OUTDIR/_current_topic.txt = {read_str(current_file)}")
 
-    # Trace explicite du topic qui sera lu par run_topic
-    print(f"[CHECK] Topic OUTDIR/_current_topic.txt = {read_str(current_dst)}")
-
-    # 4) Collecte (lecture forcée via --topics-file pointant OUTDIR)
+    # 4) Collecte (forcée à utiliser le fichier OUTDIR)
     run_step(
         "Collecte (run_topic)",
         [sys.executable, "-m", "app.run_topic",
-            "--topics-file", str(current_dst)],
+            "--topics-file", str(current_file)],
     )
 
     # 5) Agrégation des logs
