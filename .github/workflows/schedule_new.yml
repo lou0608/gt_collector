@@ -1,0 +1,94 @@
+name: Google Trends Daily Pipeline (New Test)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 09:00 UTC = 11:00 Paris
+    - cron: "0 9 * * *"
+
+env:
+  PYTHONUNBUFFERED: "1"
+  GT_MAX_CALLS: "20"
+  GT_GEO: "FR"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gt_schedule_new
+  cancel-in-progress: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout main (code)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Ensure data dirs
+        run: python -c "from app.paths import ensure_dirs; ensure_dirs()"
+
+      - name: Select next topic (persist pointer)
+        id: pick
+        run: |
+          python -m app.next_topic \
+            --topics-file data/config/topics.txt \
+            --state-file data/state/topic_pointer.json \
+            --out-file   data/config/_current_topic.txt | tee /tmp/selected_topic.txt
+          echo "TOPIC=$(cat /tmp/selected_topic.txt)" >> $GITHUB_ENV
+          echo "### Topic sélectionné" >> $GITHUB_STEP_SUMMARY
+          echo "$(cat /tmp/selected_topic.txt)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run pipeline (1 topic)
+        run: |
+          python -u -m app.run_topic --topics-file data/config/_current_topic.txt
+
+      - name: Upload CSV artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trends-csv
+          if-no-files-found: warn
+          path: |
+            data/**/*.csv
+            data/*.csv
+
+      - name: Checkout data-branch (outputs history)
+        uses: actions/checkout@v4
+        with:
+          ref: data-branch
+          path: data-branch
+
+      - name: Copy outputs to data-branch
+        run: |
+          mkdir -p data-branch/data/processed data-branch/data/logs data-branch/data/state
+          cp -R -f data/processed/. data-branch/data/processed/ || true
+          cp -R -f data/logs/.      data-branch/data/logs/      || true
+          cp -R -f data/state/.     data-branch/data/state/     || true
+
+      - name: Commit & push to data-branch
+        run: |
+          cd data-branch
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed data/logs data/state || true
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+          else
+            git commit -m "GT: $(date -u +'%Y-%m-%d') topic: ${TOPIC}"
+            git push origin HEAD:data-branch
+          fi
