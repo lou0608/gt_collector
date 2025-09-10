@@ -12,6 +12,7 @@ env:
   GT_MAX_CALLS: "20"
   GT_GEO: "FR"
   PYTHONPATH: "."
+  OUTDIR: "data"
 
 permissions:
   contents: write
