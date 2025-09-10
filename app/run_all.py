@@ -1,15 +1,16 @@
 # app/run_all.py
 """
 Orchestration locale/CI :
-1. Choisit le prochain topic (app.next_topic)
-2. Synchronise _current_topic.txt vers OUTDIR/config
-3. Lance la collecte (app.run_topic)
-4. Construit les fichiers de logs (app.aggregate_calls_meter)
+1) SYNC topics.txt -> OUTDIR/config
+2) Choisit le prochain topic (app.next_topic)
+3) SYNC _current_topic.txt -> OUTDIR/config
+4) Lance la collecte (app.run_topic)
+5) Agrège les logs (app.aggregate_calls_meter)
 
-Sorties attendues dans data/processed :
-- topics_all.csv  (les données Google Trends)
-- calls_all.csv   (les logs d’appels)
-- meter.csv       (le compteur d’appels)
+Sorties attendues dans OUTDIR/processed :
+- topics_all.csv  (données Google Trends)
+- calls_all.csv   (logs d’appels)
+- meter.csv       (compteur d’appels)
 """
 from __future__ import annotations
 
@@ -26,43 +27,55 @@ def run_step(description: str, cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
 
 
+def safe_copy(src: Path, dst: Path, label: str) -> None:
+    if src.exists():
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        print(f"[SYNC {label}] Copié {src} -> {dst}")
+    else:
+        print(f"[SYNC {label}] Source absente : {src}")
+
+
+def read_str(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+
+
 def main() -> None:
+    # Racine du repo (gt_collector/)
     repo = Path(__file__).resolve().parents[1]
 
-    # OUTDIR : utilisé en CI (ex: data-branch/data) ou local (fallback repo/data)
+    # OUTDIR : override en CI (ex: data-branch/data), fallback local = repo/data
     outdir = Path(os.getenv("OUTDIR", repo / "data"))
     (outdir / "config").mkdir(parents=True, exist_ok=True)
 
-    # Étape 1 : Sélection du prochain topic
+    # 1) Synchroniser topics.txt (source = repo) vers OUTDIR
+    topics_src = repo / "data" / "config" / "topics.txt"
+    topics_dst = outdir / "config" / "topics.txt"
+    safe_copy(topics_src, topics_dst, "TOPICS")
+
+    # 2) Sélection du prochain topic
     run_step("Sélection du prochain topic", [
              sys.executable, "-m", "app.next_topic"])
 
-    # Étape 2 : Synchronisation du fichier courant vers OUTDIR/config
-    # Cas standard actuel : next_topic écrit dans repo/data/config/_current_topic.txt
-    src_primary = repo / "data" / "config" / "_current_topic.txt"
-    # Cas futur (si next_topic écrit déjà dans OUTDIR) : on retombe sur le même fichier
-    src_fallback = outdir / "config" / "_current_topic.txt"
+    # 3) Synchroniser _current_topic.txt vers OUTDIR
+    current_src = repo / "data" / "config" / "_current_topic.txt"
+    current_dst = outdir / "config" / "_current_topic.txt"
+    safe_copy(current_src, current_dst, "CURRENT")
 
-    if src_primary.exists():
-        src = src_primary
-    elif src_fallback.exists():
-        src = src_fallback
-    else:
-        raise FileNotFoundError(
-            f"Impossible de trouver _current_topic.txt ni dans {src_primary} ni dans {src_fallback}."
-        )
+    # Trace explicite du topic qui sera lu par run_topic
+    print(f"[CHECK] Topic OUTDIR/_current_topic.txt = {read_str(current_dst)}")
 
-    dst = outdir / "config" / "_current_topic.txt"
-    shutil.copy2(src, dst)
-    print(f"[SYNC] Copié {src} -> {dst}")
-
-    # Étape 3 : Collecte avec le fichier synchronisé
+    # 4) Collecte (lecture forcée via --topics-file pointant OUTDIR)
     run_step(
         "Collecte (run_topic)",
-        [sys.executable, "-m", "app.run_topic", "--topics-file", str(dst)],
+        [sys.executable, "-m", "app.run_topic",
+            "--topics-file", str(current_dst)],
     )
 
-    # Étape 4 : Agrégation des logs
+    # 5) Agrégation des logs
     run_step("Agrégation des logs", [
              sys.executable, "-m", "app.aggregate_calls_meter"])
 
