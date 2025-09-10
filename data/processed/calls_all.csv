@@ -1,5 +1,5 @@
 ts_utc,run_id,phase,topic_mid,timeframe,geo,attempt,status,error
 2025-09-10T09:55:20Z,54ee7ab2,daily,Bradycardie,today 5-y,FR,1,ok,
 2025-09-10T09:55:49Z,54ee7ab2,daily:fetch,Bradycardie,today 5-y,FR,1,429,TooManyRequests(fetch)
-2025-09-10T14:54:49Z,c9c928ad,daily,Cardiopathie,today 5-y,FR,1,ok,
-2025-09-10T14:55:20Z,c9c928ad,daily:fetch,Cardiopathie,today 5-y,FR,1,429,TooManyRequests(fetch)
+2025-09-10T15:31:07Z,1971f580,daily,Myocarde,today 5-y,FR,1,ok,
+2025-09-10T15:31:36Z,1971f580,daily:fetch,Myocarde,today 5-y,FR,1,429,TooManyRequests(fetch)
