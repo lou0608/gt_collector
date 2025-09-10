@@ -11,6 +11,7 @@ env:
   PYTHONUNBUFFERED: "1"
   GT_MAX_CALLS: "20"
   GT_GEO: "FR"
+  PYTHONPATH: "."
 
 permissions:
   contents: write
@@ -42,7 +43,7 @@ jobs:
           fi
 
       - name: Ensure data dirs
-        run: python -c "from app.paths import ensure_dirs; ensure_dirs()"
+        run: PYTHONPATH=. python -c "from app.paths import ensure_dirs; ensure_dirs()"
 
       - name: Select next topic (persist pointer)
         id: pick
