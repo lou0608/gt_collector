@@ -8,7 +8,7 @@ on:
 
 env:
   PYTHONUNBUFFERED: "1"
-  GT_MAX_CALLS: "2"
+  GT_MAX_CALLS: "2"     # on limite à 2 appels pour éviter les 429
   GT_GEO: "FR"
   PYTHONPATH: "."
   OUTDIR: "data"
@@ -45,7 +45,7 @@ jobs:
       - name: Ensure data dirs
         run: mkdir -p data/logs data/processed data/config data/state
 
-      # 🔥 Nouvelle étape : restaurer le pointeur depuis data-branch
+      # 🔥 Restaurer le pointeur depuis data-branch
       - name: Checkout data-branch (pointer state)
         uses: actions/checkout@v4
         with:
@@ -72,7 +72,8 @@ jobs:
       - name: Run pipeline (1 topic)
         run: |
           python -u -m app.run_topic --topics-file data/config/_current_topic.txt
-    
+
+      # 🔥 Nouvelle étape : post-traitement pour générer data/processed/
       - name: Postprocess results
         run: |
           python -m app.postprocess
