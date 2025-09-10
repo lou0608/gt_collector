@@ -1,52 +1,33 @@
-name: Google Trends Daily Pipeline (New Test)
+name: Google Trends Daily Pipeline
 
 on:
   workflow_dispatch:
   schedule:
-    # 09:00 UTC = 11:00 Paris
+    # Tous les jours à 11h (heure UTC)
     - cron: "0 9 * * *"
-
-env:
-  PYTHONUNBUFFERED: "1"
-  GT_MAX_CALLS: "2"     # on limite à 2 appels pour éviter les 429
-  GT_GEO: "FR"
-  PYTHONPATH: "."
-  OUTDIR: "data"
-
-permissions:
-  contents: write
-
-concurrency:
-  group: gt_schedule_new
-  cancel-in-progress: false
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
 
     steps:
-      - name: Checkout main (code)
+      - name: Checkout main repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Ensure data dirs
-        run: mkdir -p data/logs data/processed data/config data/state
+      - name: Prepare folders
+        run: |
+          mkdir -p data/logs data/processed data/config data/state
 
-      # 🔥 Restaurer le pointeur depuis data-branch
-      - name: Checkout data-branch (pointer state)
+      - name: Checkout data branch
         uses: actions/checkout@v4
         with:
           ref: data-branch
@@ -55,60 +36,27 @@ jobs:
       - name: Restore topic pointer
         run: |
           if [ -f data-branch/data/state/topic_pointer.json ]; then
-            cp data-branch/data/state/topic_pointer.json data/state/
+            cp data-branch/data/state/topic_pointer.json data/state/topic_pointer.json
           fi
 
-      - name: Select next topic (persist pointer)
-        id: pick
+      - name: Run orchestrator (topics + logs)
+        env:
+          OUTDIR: ${{ github.workspace }}/data-branch/data
+          GT_MAX_CALLS: "2"
         run: |
-          python -m app.next_topic \
-            --topics-file data/config/topics.txt \
-            --state-file data/state/topic_pointer.json \
-            --out-file   data/config/_current_topic.txt | tee /tmp/selected_topic.txt
-          echo "TOPIC=$(cat /tmp/selected_topic.txt)" >> $GITHUB_ENV
-          echo "### Topic sélectionné" >> $GITHUB_STEP_SUMMARY
-          echo "$(cat /tmp/selected_topic.txt)" >> $GITHUB_STEP_SUMMARY
+          python -m app.run_all
 
-      - name: Run pipeline (1 topic)
-        run: |
-          python -u -m app.run_topic --topics-file data/config/_current_topic.txt
-
-      # 🔥 Nouvelle étape : post-traitement pour générer data/processed/
-      - name: Postprocess results
-        run: |
-          python -m app.postprocess
-
-      - name: Upload CSV artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: trends-csv
-          if-no-files-found: warn
-          path: |
-            data/**/*.csv
-            data/*.csv
+          path: data-branch/data/processed/*.csv
 
-      - name: Checkout data-branch (outputs history)
-        uses: actions/checkout@v4
-        with:
-          ref: data-branch
-          path: data-branch
-
-      - name: Copy outputs to data-branch
-        run: |
-          mkdir -p data-branch/data/processed data-branch/data/logs data-branch/data/state
-          cp -R -f data/processed/. data-branch/data/processed/ || true
-          cp -R -f data/logs/.      data-branch/data/logs/      || true
-          cp -R -f data/state/.     data-branch/data/state/     || true
-
-      - name: Commit & push to data-branch
+      - name: Commit & push results to data-branch
         run: |
           cd data-branch
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f data/processed data/logs data/state || true
-          if git diff --cached --quiet; then
-            echo "Nothing to commit."
-          else
-            git commit -m "GT: $(date -u +'%Y-%m-%d') topic: ${TOPIC}"
-            git push origin HEAD:data-branch
-          fi
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed/*.csv data/state/topic_pointer.json
+          git commit -m "GT: $(date +'%Y-%m-%d') orchestrator run"
+          git push origin data-branch
