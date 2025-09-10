@@ -1,4 +1,3 @@
-#test de visibilité
 name: Google Trends Daily Pipeline (New Test)
 
 on:
@@ -44,7 +43,7 @@ jobs:
           fi
 
       - name: Ensure data dirs
-        run: PYTHONPATH=. python -c "from app.paths import ensure_dirs; ensure_dirs()"
+        run: mkdir -p data/logs data/processed data/config data/state
 
       - name: Select next topic (persist pointer)
         id: pick
@@ -88,7 +87,7 @@ jobs:
           cd data-branch
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/processed data/logs data/state || true
+          git add -f data/processed data/logs data/state || true
           if git diff --cached --quiet; then
             echo "Nothing to commit."
           else
