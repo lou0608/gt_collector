@@ -17,7 +17,7 @@ services:
       - ./data:/data
       - ./logs:/logs
       - ./app:/app/app
-      - ./scripts:/app/scripts # 👈 ajout pour avoir scripts montés aussi en dev local
+      - ./scripts:/app/scripts
 
     working_dir: /app
 

@@ -1,6 +1,8 @@
 # --- Sorties et données locales ---
 /data/*
 !data/.gitkeep
+!data/config/
+!data/config/topics.txt
 *.csv
 *.parquet
 *.log
