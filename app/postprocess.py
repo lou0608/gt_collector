@@ -54,13 +54,13 @@ def _norm_topic_df(df: pd.DataFrame, source_file: str) -> pd.DataFrame:
             try:
                 long_df["is_partial"] = df2["isPartial"].repeat(
                     len(topic_cols)).reset_index(drop=True)
-            except:
+            except Exception:
                 long_df["is_partial"] = False
         elif "is_partial" in df2.columns:
             try:
                 long_df["is_partial"] = df2["is_partial"].repeat(
                     len(topic_cols)).reset_index(drop=True)
-            except:
+            except Exception:
                 long_df["is_partial"] = False
         else:
             long_df["is_partial"] = False
@@ -100,7 +100,7 @@ def build_topics(processed_dir: Path, raw_daily_dir: Path) -> None:
                 if "date" in tmp.columns:
                     d = pd.to_datetime(
                         tmp["date"], errors="coerce").dt.date.max()
-            except:
+            except Exception:
                 d = None
         if d is not None:
             dated.append((f, d))
