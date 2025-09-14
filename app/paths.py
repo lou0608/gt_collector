@@ -6,7 +6,7 @@ from pathlib import Path
 # Racine du repo (= dossier qui contient "app" et "data")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# OUTDIR peut être absolu ou relatif ; par défaut "data" dans le repo
+# OUTDIR : absolu ou relatif ; défaut "data" dans le repo
 _raw_outdir = os.getenv("OUTDIR")
 if _raw_outdir:
     OUTDIR = Path(_raw_outdir).resolve()

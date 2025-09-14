@@ -1,3 +1,4 @@
+from app.paths import PROCESSED_DIR, LOGDIR as LOGSDIR, CONFIG_DIR as CONFIGDIR, ensure_dirs
 from app.normalize import normalize_daily
 from app.callmeter import log_call, CallBudget, METER_PATH
 import os
@@ -18,18 +19,8 @@ warnings.filterwarnings(
     message="Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated"
 )
 
-# ====== Config ======
-if os.getenv("OUTDIR"):
-    BASEDIR = Path(os.getenv("OUTDIR"))
-else:
-    BASEDIR = Path("/data")  # par défaut : ./data dans le projet
-
-PROCESSED_DIR = BASEDIR / "processed"
-LOGSDIR = BASEDIR / "logs"
-CONFIGDIR = BASEDIR / "config"
-
-for d in (PROCESSED_DIR, LOGSDIR, CONFIGDIR):
-    d.mkdir(parents=True, exist_ok=True)
+# ====== Config unifiée via app.paths ======
+ensure_dirs()
 
 # Fichiers uniques
 TOPICS_ALL_PATH = PROCESSED_DIR / "topics_all.csv"
