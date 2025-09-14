@@ -1,5 +1,5 @@
 ts_utc,run_id,phase,topic_mid,timeframe,geo,attempt,status,error
 2025-09-10T09:55:20Z,54ee7ab2,daily,Bradycardie,today 5-y,FR,1,ok,
 2025-09-10T09:55:49Z,54ee7ab2,daily:fetch,Bradycardie,today 5-y,FR,1,429,TooManyRequests(fetch)
-2025-09-11T11:51:47Z,c6b0dcc8,daily,Cathétérisme cardiaque,today 5-y,FR,1,ok,
-2025-09-11T11:52:24Z,c6b0dcc8,daily:fetch,Cathétérisme cardiaque,today 5-y,FR,1,429,TooManyRequests(fetch)
+2025-09-14T11:51:03Z,c2ca14ea,daily,Réadaptation cardiaque,today 5-y,FR,1,ok,
+2025-09-14T11:51:30Z,c2ca14ea,daily:fetch,Réadaptation cardiaque,today 5-y,FR,1,ok,
