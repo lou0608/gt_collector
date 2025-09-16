@@ -1,5 +1,5 @@
 {
-  "index": 0,
+  "index": 1,
   "history": [
     {
       "ts_utc": "2025-09-10T08:32:35.716954+00:00",
@@ -77,6 +77,12 @@
       "ts_utc": "2025-09-14T11:51:02.631340+00:00",
       "topic": "Réadaptation cardiaque",
       "index": 0,
+      "total_topics": 2
+    },
+    {
+      "ts_utc": "2025-09-16T15:34:50.852688+00:00",
+      "topic": "Cathétérisme cardiaque",
+      "index": 1,
       "total_topics": 2
     }
   ]
