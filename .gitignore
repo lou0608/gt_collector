@@ -7,6 +7,8 @@
 *.parquet
 *.log
 *.tmp
+*.pbix
+
 # Data & logs (garder les dossiers vides)
 data/raw/*
 !data/raw/.gitkeep
