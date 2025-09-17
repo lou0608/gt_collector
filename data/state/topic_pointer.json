@@ -1,5 +1,5 @@
 {
-  "index": 1,
+  "index": 2,
   "history": [
     {
       "ts_utc": "2025-09-10T08:32:35.716954+00:00",
@@ -84,6 +84,12 @@
       "topic": "Cathétérisme cardiaque",
       "index": 1,
       "total_topics": 2
+    },
+    {
+      "ts_utc": "2025-09-17T13:32:13.662477+00:00",
+      "topic": "Tension artérielle",
+      "index": 2,
+      "total_topics": 3
     }
   ]
 }
