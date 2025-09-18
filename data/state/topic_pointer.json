@@ -1,5 +1,5 @@
 {
-  "index": 2,
+  "index": 3,
   "history": [
     {
       "ts_utc": "2025-09-10T08:32:35.716954+00:00",
@@ -90,6 +90,12 @@
       "topic": "Tension artérielle",
       "index": 2,
       "total_topics": 3
+    },
+    {
+      "ts_utc": "2025-09-18T10:38:31.722416+00:00",
+      "topic": "Thrombolyse",
+      "index": 3,
+      "total_topics": 4
     }
   ]
 }
